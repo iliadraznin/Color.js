@@ -1,5 +1,5 @@
 /*
- * Color.js - v1.0
+ * Color.js - v1.1
  * Description: Color object for creating, manipulating and outputing colors.
  * Author: Ilia Draznin
  * License: WTFPL http://www.wtfpl.net/about/
@@ -30,7 +30,7 @@ Color.prototype = {
 			this._blue = b/255.0;
 		}
 		this.calcHEX();
-		this.calcHSL();
+		this.calcHSV();
 
 		return this;
 	},
@@ -38,31 +38,31 @@ Color.prototype = {
 		if (typeof r == 'undefined') return this._red*255 | 0;
 		this._red = r/255.0;
 		this.calcHEX();
-		this.calcHSL();
+		this.calcHSV();
 	},
 	green: function(g) {
 		if (typeof g == 'undefined') return this._green*255 | 0;
 		this._green = g/255.0;
 		this.calcHEX();
-		this.calcHSL();
+		this.calcHSV();
 	},
 	blue: function(b) {
 		if (typeof b == 'undefined') return this._blue*255 | 0;
 		this._blue = b/255.0;
 		this.calcHEX();
-		this.calcHSL();
+		this.calcHSV();
 	},
 
-	hsl: function(h, s, l) {
-		if (typeof h == 'undefined' && typeof s == 'undefined' && typeof l == 'undefined') {
-			return [this._hue, this._saturation*100 | 0, this._lightness*100 | 0];
+	hsv: function(h, s, v) {
+		if (typeof h == 'undefined' && typeof s == 'undefined' && typeof v == 'undefined') {
+			return [this._hue, this._saturation*100 | 0, this._value*100 | 0];
 		}
 		else {
 			this._hue = h;
 			this._saturation = s/100.0;
-			this._lightness = l/100.0;
+			this._value = v/100.0;
 		}
-		this.calcRGBfromHSL();
+		this.calcRGBfromHSV();
 		this.calcHEX();
 
 		return this;
@@ -70,19 +70,19 @@ Color.prototype = {
 	hue: function(h) {
 		if (typeof h == 'undefined') return this._hue;
 		this._hue = h;
-		this.calcRGBfromHSL();
+		this.calcRGBfromHSV();
 		this.calcHEX();
 	},
 	saturation: function(s) {
 		if (typeof s == 'undefined') return this._saturation*100 | 0;
 		this._saturation = s/100.0;
-		this.calcRGBfromHSL();
+		this.calcRGBfromHSV();
 		this.calcHEX();
 	},
-	lightness: function(l) {
-		if (typeof l == 'undefined') return this._lightness*100 | 0;
-		this._lightness = l/100.0;
-		this.calcRGBfromHSL();
+	value: function(v) {
+		if (typeof v == 'undefined') return this._value*100 | 0;
+		this._value = v/100.0;
+		this.calcRGBfromHSV();
 		this.calcHEX();
 	},
 
@@ -90,17 +90,17 @@ Color.prototype = {
 		if (typeof hex == 'undefined') return '#' + this._hex;
 		this._hex = validHex(hex);
 		this.calcRGB();
-		this.calcHSL();
+		this.calcHSV();
 
 		return this;
 	},
 
 	// internal calculators
-	calcHSL: function() {
-		var hsl = rgb2hsl( this._red*255 | 0, this._green*255 | 0, this._blue*255 | 0 );
+	calcHSV: function() {
+		var hsl = rgb2hsv( this._red*255 | 0, this._green*255 | 0, this._blue*255 | 0 );
 		this._hue = hsl.hue;
 		this._saturation = hsl.saturation/100.0;
-		this._lightness = hsl.lightness/100.0;
+		this._value = hsl.value/100.0;
 	},
 	calcRGB: function() {
 		var rgb = hex2rgb( this._hex );
@@ -108,8 +108,8 @@ Color.prototype = {
 		this._green = rgb.green/255.0;
 		this._blue = rgb.blue/255.0;
 	},
-	calcRGBfromHSL: function() {
-		var rgb = hsl2rgb( this._hue, this._saturation*100 | 0, this._lightness*100 | 0 );
+	calcRGBfromHSV: function() {
+		var rgb = hsl2rgb( this._hue, this._saturation*100 | 0, this._value*100 | 0 );
 		this._red = rgb.red/255.0;
 		this._green = rgb.green/255.0;
 		this._blue = rgb.blue/255.0;
@@ -121,11 +121,11 @@ Color.prototype = {
 	// utility
 	complement: function() {
 		var newHue = this._hue >= 180 ? this._hue - 180 : this.hue + 180,
-			newLight = this._lightness * (this._saturation - 1) + 1,
-			newSat = (this._lightness * this._saturation) / newLight,
+			newVal = this._value * (this._saturation - 1) + 1,
+			newSat = (this._value * this._saturation) / newVal,
 			color = new Color();
 
-		return color.hsl(newHue, newLight*100, newSat*100);
+		return color.hsl(newHue, newVal*100, newSat*100);
 	}
 };
 
@@ -173,17 +173,17 @@ function rgb2hex(r, g, b) {
 	return rStr + gStr + bStr;
 }
 
-function rgb2hsl(r, g, b) {
-	var h, s, l,
+function rgb2hsv(r, g, b) {
+	var h, s, v,
 		r = r/255.0, g = g/255.0, b = b/255.0,
 		max = Math.max( Math.max(r, g), b),
 		min = Math.min( Math.min(r, g), b);
 
-	l = max;
+	v = max;
 	s = max != 0 ? 1 - min/max : 0;
 
 	h = 0;
-	if (min == max) return { hue:h, saturation:s, lightness:l };
+	if (min == max) return { hue:h, saturation:s, value:v };
 
 	var delta = max - min;
 	if (r == max)
@@ -199,60 +199,60 @@ function rgb2hsl(r, g, b) {
 	if (h < 0) h += 360;
 	h = h | 0;
 
-	return { hue:h, saturation:Math.round(s*100), lightness:Math.round(l*100) };
+	return { hue:h, saturation:Math.round(s*100), value:Math.round(v*100) };
 }
 
-function hsl2rgb(h, s, l) {
+function hsv2rgb(h, s, v) {
 	var r, g, b,
 		s = s/100.0,
-		l = l/100.0;
+		v = v/100.0;
 
-	r = g = b = l*255 | 0;
+	r = g = b = v*255 | 0;
 
-	if (l == 0 || s == 0) return { red:r, green:g, blue:b };
+	if (v == 0 || s == 0) return { red:r, green:g, blue:b };
 
 	var th = (h / 60),
 		i = th | 0,
 		f = th - i,
-		p = l * (1 - s),
-		q = l * (1 - s * f),
-		t = l * (1 - s * (1 - f));
+		p = v * (1 - s),
+		q = v * (1 - s * f),
+		t = v * (1 - s * (1 - f));
 	
 	switch (i) {
 		case 0:
-			r = l; g = t; b = p;
+			r = v; g = t; b = p;
 			break;
 
 		case 1:
-			r = q; g = l; b = p;
+			r = q; g = v; b = p;
 			break;
 
 		case 2:
-			r = p; g = l; b = t;
+			r = p; g = v; b = t;
 			break;
 
 		case 3:
-			r = p; g = q; b = l;
+			r = p; g = q; b = v;
 			break;
 
 		case 4:
-			r = t; g = p; b = l;
+			r = t; g = p; b = v;
 			break;
 
 		default:
-			r = l; g = p; b = q;
+			r = v; g = p; b = q;
 			break;
 	}
 	return { red:r*255 | 0, green:g*255 | 0, blue:b*255 | 0 };
 }
 
-function hex2hsl(hex) {
+function hex2hsv(hex) {
 	var rgb = hex2rgb(hex);
-	return rgb2hsl(rgb.red, rgb.green, rgb.blue);
+	return rgb2hsv(rgb.red, rgb.green, rgb.blue);
 }
 
-function hsl2hex(h, s, l) {
-	var rgb = hsl2rgb(h, s, l);
+function hsv2hex(h, s, v) {
+	var rgb = hsv2rgb(h, s, v);
 	return rgb2hex(rgb.red, rgb.green, rgb.blue);
 }
 
