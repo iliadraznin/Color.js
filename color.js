@@ -1,5 +1,5 @@
 /*
- * Color.js - v1.1
+ * Color.js - v1.4
  * Description: Color object for creating, manipulating and outputing colors.
  * Author: Ilia Draznin
  * License: WTFPL http://www.wtfpl.net/about/
@@ -162,9 +162,9 @@ function hex2rgb(hex) {
 }
 
 function rgb2hex(r, g, b) {
-	var rStr = r.toString(16),
-		gStr = g.toString(16),
-		bStr = b.toString(16);
+	var rStr = (+r).toString(16),
+		gStr = (+g).toString(16),
+		bStr = (+b).toString(16);
 
 	if (rStr.length == 1) rStr = '0' + rStr;
 	if (gStr.length == 1) gStr = '0' + gStr;
@@ -256,16 +256,76 @@ function hsv2hex(h, s, v) {
 	return rgb2hex(rgb.red, rgb.green, rgb.blue);
 }
 
-function rgbToString(r, g, b) {
-	var nr, ng, nb;
-	if (typeof r == 'object') {
-		var keys = Object.keys(r);
-		nr = r[keys[0]];
-		ng = r[keys[1]];
-		nb = r[keys[2]];
+function hsv2hsl(h, s, v) {
+	var s = s/100.0,
+		v = v/100.0,
+		sat = s * v,
+		light = (2 - s) * v;
+
+	return {
+		hue: 		h,
+		saturation: Math.round( (sat / (light <= 1 ? light : 2 - light)) * 100 ),
+		lightness:  Math.round( (light / 2.0) * 100 )
+	}
+}
+
+function hsl2hsv(h, s, l) {
+	var s = s/100.0,
+		l = l/100.0 * 2;
+
+	s *= l <= 1 ? l : 2 - l;
+
+	return {
+		hue: 		h,
+		saturation: Math.round( ((2 * s) / (l + s)) * 100 ),
+		value: 		Math.round( ((l + s) / 2.0) * 100 )
+	}
+}
+
+function fourToArray(a, b, c, d) {
+	var arrOut = [];
+	if (typeof a == 'object') {
+		var keys = Object.keys(a);
+		arrOut[0] = a[keys[0]];
+		arrOut[1] = a[keys[1]];
+		arrOut[2] = a[keys[2]];
+		if (keys.length >= 4) arrOut[3] = a[keys[3]];
 	}
 	else {
-		nr = r; ng = g; nb = b;
+		arrOut[0] = a; arrOut[1] = b; arrOut[2] = c;
+		if (typeof d != 'undefined') arrOut[3] = d;
 	}
-	return 'rgba(' + nr + ',' + ng + ',' + nb + ')';
+	// if fourth value exists (alpha) convert percentage
+	if (arrOut.length == 4 && arrOut[3] > 1) {
+		arrOut[3] = arrOut[3]/100.0;
+	}
+
+	return arrOut;
+}
+
+function rgbaToCSS(r, g, b, a) {
+	var rgbaArr = fourToArray(r, g, b, a);
+	return typeof a == 'undefined'
+		? 'rgb(' + rgbaArr.join(',') + ')'
+		: 'rgba(' + rgbaArr.join(',') + ')';
+}
+
+function hslaToCSS(h, s, l, a) {
+	var hslaArr = fourToArray(h, s, l, a);
+	hslaArr[1] += '%';
+	hslaArr[2] += '%';
+	return typeof a == 'undefined'
+		? 'hsl(' + hslaArr.join(',') + ')'
+		: 'hsla(' + hslaArr.join(',') + ')';
+}
+
+function hsvToCSS(h, s, v) {
+	var hsl = hsv2hsl(h, s, v),
+		hsvArr = fourToArray(hsl);
+		
+	hsvArr[1] += '%';
+	hsvArr[2] += '%';
+	return typeof a == 'undefined'
+		? 'hsl(' + hsvArr.join(',') + ')'
+		: 'hsla(' + hsvArr.join(',') + ')';
 }
