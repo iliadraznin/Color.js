@@ -1,18 +1,27 @@
 /*
- * Color.js - v1.4
+ * Color.js - v1.6
  * Description: Color object for creating, manipulating and outputing colors.
  * Author: Ilia Draznin
  * License: WTFPL http://www.wtfpl.net/about/
  */
 function Color(r, g, b) {
-	// color can be constructed using RGB values or HEX value, but not HSL
+	// color can be constructed using RGB, HEX, or w/ some prejudice HSV (but not HSL)
 	if (typeof r == 'string' && r[0] == '#') {
 		// treat r as hex value for color
 		this.hex(r);
 	}
 	else {
-		// treat inputs as regular R, G, B values
-		this.rgb(r || 0, g || 0, b || 0);
+		// extract the color values from the parameters
+		var colors = toColorsArray(r, g, b);
+
+		// if the first value is more than 255 then assume these are HSV
+		if (parseInt(colors[0]) > 255) {
+			this.hsv(colors[0], colors[1], colors[2]);
+		}
+		// otherwise assume these are RGB values
+		else {
+			this.rgb(colors[0], colors[1], colors[2]);
+		}
 	}
 }
 Color.prototype = {
@@ -109,7 +118,7 @@ Color.prototype = {
 		this._blue = rgb.blue/255.0;
 	},
 	calcRGBfromHSV: function() {
-		var rgb = hsl2rgb( this._hue, this._saturation*100 | 0, this._value*100 | 0 );
+		var rgb = hsv2rgb( this._hue, this._saturation*100 | 0, this._value*100 | 0 );
 		this._red = rgb.red/255.0;
 		this._green = rgb.green/255.0;
 		this._blue = rgb.blue/255.0;
@@ -183,7 +192,7 @@ function rgb2hsv(r, g, b) {
 	s = max != 0 ? 1 - min/max : 0;
 
 	h = 0;
-	if (min == max) return { hue:h, saturation:s, value:v };
+	if (min == max) return { hue:h, saturation:Math.round(s*100), value:Math.round(v*100) };
 
 	var delta = max - min;
 	if (r == max)
@@ -282,19 +291,29 @@ function hsl2hsv(h, s, l) {
 	}
 }
 
-function fourToArray(a, b, c, d) {
-	var arrOut = [];
-	if (typeof a == 'object') {
+// toColorsArray takes up to 4 parameters and converts them to an array of color values
+// it can do it for just 4 values, or if the first value is an array or an object
+// it will convert it to array and ignore rest of the parameters
+function toColorsArray(a, b, c, d) {
+	var arrOut = [], a_is = istype(a);
+	if (a_is == 'undefined') {
+		return [0, 0, 0];
+	}
+	else if (a_is == 'object') {
 		var keys = Object.keys(a);
 		arrOut[0] = a[keys[0]];
 		arrOut[1] = a[keys[1]];
 		arrOut[2] = a[keys[2]];
 		if (keys.length >= 4) arrOut[3] = a[keys[3]];
 	}
+	else if (a_is == 'array') {
+		arrOut = a;
+	}
 	else {
 		arrOut[0] = a; arrOut[1] = b; arrOut[2] = c;
 		if (typeof d != 'undefined') arrOut[3] = d;
 	}
+
 	// if fourth value exists (alpha) convert percentage
 	if (arrOut.length == 4 && arrOut[3] > 1) {
 		arrOut[3] = arrOut[3]/100.0;
@@ -304,14 +323,14 @@ function fourToArray(a, b, c, d) {
 }
 
 function rgbaToCSS(r, g, b, a) {
-	var rgbaArr = fourToArray(r, g, b, a);
+	var rgbaArr = toColorsArray(r, g, b, a);
 	return typeof a == 'undefined'
 		? 'rgb(' + rgbaArr.join(',') + ')'
 		: 'rgba(' + rgbaArr.join(',') + ')';
 }
 
 function hslaToCSS(h, s, l, a) {
-	var hslaArr = fourToArray(h, s, l, a);
+	var hslaArr = toColorsArray(h, s, l, a);
 	hslaArr[1] += '%';
 	hslaArr[2] += '%';
 	return typeof a == 'undefined'
@@ -321,11 +340,17 @@ function hslaToCSS(h, s, l, a) {
 
 function hsvToCSS(h, s, v) {
 	var hsl = hsv2hsl(h, s, v),
-		hsvArr = fourToArray(hsl);
+		hsvArr = toColorsArray(hsl);
 		
 	hsvArr[1] += '%';
 	hsvArr[2] += '%';
 	return typeof a == 'undefined'
 		? 'hsl(' + hsvArr.join(',') + ')'
 		: 'hsla(' + hsvArr.join(',') + ')';
+}
+
+function istype(obj) {
+	return (typeof obj !== 'object' || typeof obj[0] === 'undefined')
+		? typeof obj
+		: 'array';
 }
